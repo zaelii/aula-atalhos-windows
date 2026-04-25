@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercício — Atalhos do Windows</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green:  #69ff47;
+      --cyan:   #00e5ff;
+      --purple: #c084fc;
+      --yellow: #fbbf24;
+      --red:    #ff4d4d;
+      --bg:     #0a0a1a;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: #e0e0ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ── PARTÍCULAS BG ── */
+    #particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* ── TELAS ── */
+    .screen {
+      position: relative;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 720px;
+      padding: 20px;
+    }
+    .screen.active { display: flex; }
+
+    /* ── TELA INICIAL ── */
+    #screen-start { text-align: center; gap: 18px; }
+    #screen-start .logo { font-size: 5rem; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+    #screen-start h1 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #screen-start p { color: #aab0cc; font-size: 1rem; line-height: 1.6; max-width: 480px; }
+
+    .level-select {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 6px;
+    }
+    .level-btn {
+      background: rgba(255,255,255,.07);
+      border: 2px solid rgba(255,255,255,.15);
+      border-radius: 14px;
+      padding: 16px 24px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+      color: #e0e0ff;
+      min-width: 150px;
+    }
+    .level-btn:hover { transform: translateY(-4px); }
+    .level-btn.easy   { border-color: var(--green);  }
+    .level-btn.medium { border-color: var(--yellow); }
+    .level-btn.hard   { border-color: var(--red);    }
+    .level-btn .icon  { font-size: 2rem; display: block; margin-bottom: 6px; }
+    .level-btn .name  { font-weight: 700; font-size: 1rem; }
+    .level-btn .desc  { font-size: .78rem; color: #aab0cc; margin-top: 3px; }
+
+    /* ── HUD ── */
+    #hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 720px;
+      padding: 0 20px;
+      position: fixed;
+      top: 0;
+      z-index: 50;
+      background: rgba(10,10,26,.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      height: 58px;
+    }
+    .hud-block { display: flex; align-items: center; gap: 8px; }
+    .hud-label { font-size: .72rem; color: #aab0cc; text-transform: uppercase; letter-spacing: 1px; }
+    .hud-val   { font-size: 1.1rem; font-weight: 700; }
+    #score-val  { color: var(--cyan); }
+    #lives-val  { color: var(--red); font-size: 1.3rem; letter-spacing: 2px; }
+    #combo-val  { color: var(--yellow); }
+
+    /* timer ring */
+    #timer-ring { position: relative; width: 44px; height: 44px; }
+    #timer-ring svg { transform: rotate(-90deg); }
+    #timer-ring circle.bg  { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 4; }
+    #timer-ring circle.fg  { fill: none; stroke: var(--cyan); stroke-width: 4;
+                              stroke-dasharray: 113; stroke-dashoffset: 0;
+                              transition: stroke-dashoffset .1s linear, stroke .3s; }
+    #timer-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 700;
+    }
+
+    /* progress bar */
+    #progress-bar-wrap {
+      position: fixed; top: 58px; left: 0; right: 0;
+      height: 4px; background: rgba(255,255,255,.07); z-index: 50;
+    }
+    #progress-bar { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--green)); transition: width .4s ease; }
+
+    /* ── TELA DE QUIZ ── */
+    #screen-quiz { gap: 18px; margin-top: 80px; }
+
+    .question-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      padding: 28px 32px;
+      width: 100%;
+      text-align: center;
+    }
+    .question-label { font-size: .78rem; color: #aab0cc; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .question-text  { font-size: 1.25rem; font-weight: 600; line-height: 1.5; color: #e8eaff; }
+
+    /* teclas visuais */
+    .key-combo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 6px 0;
+    }
+    .vkey {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #2a2a50 0%, #111128 100%);
+      border: 1px solid #666;
+      border-bottom: 4px solid #333;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      min-width: 44px;
+      box-shadow: 0 3px 8px rgba(0,0,0,.5);
+    }
+    .vkey-plus { color: #aab0cc; font-size: 1rem; }
+
+    /* opções */
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+    }
+    .opt-btn {
+      background: rgba(255,255,255,.06);
+      border: 2px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 16px 18px;
+      cursor: pointer;
+      font-size: .92rem;
+      color: #e0e0ff;
+      line-height: 1.4;
+      text-align: center;
+      transition: all .18s;
+      font-family: inherit;
+    }
+    .opt-btn:hover:not(:disabled) { background: rgba(255,255,255,.12); border-color: var(--cyan); transform: translateY(-2px); }
+    .opt-btn.correct  { background: rgba(105,255,71,.15);  border-color: var(--green);  color: var(--green);  pointer-events: none; }
+    .opt-btn.wrong    { background: rgba(255,77,77,.15);   border-color: var(--red);    color: var(--red);    pointer-events: none; }
+    .opt-btn.reveal   { background: rgba(105,255,71,.08);  border-color: var(--green);  pointer-events: none; }
+    .opt-btn:disabled { pointer-events: none; opacity: .6; }
+
+    /* feedback */
+    #feedback {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      min-height: 28px;
+      transition: opacity .3s;
+    }
+
+    /* combo popup */
+    #combo-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--yellow);
+      text-shadow: 0 0 30px var(--yellow);
+      pointer-events: none;
+      z-index: 200;
+      transition: transform .2s, opacity .4s;
+      opacity: 0;
+    }
+
+    /* ── TELA FINAL ── */
+    #screen-end { gap: 20px; text-align: center; }
+    .end-trophy { font-size: 5rem; animation: float 3s ease-in-out infinite; }
+    #screen-end h2 { font-size: 2rem; font-weight: 800; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+    .stat-box {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .stat-box .val { font-size: 1.8rem; font-weight: 800; }
+    .stat-box .lbl { font-size: .78rem; color: #aab0cc; margin-top: 4px; }
+
+    .medals { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .medal {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: .85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .medal.earned { border-color: var(--yellow); color: var(--yellow); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), var(--green));
+      border: none;
+      border-radius: 12px;
+      padding: 14px 36px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0a0a1a;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      margin-top: 6px;
+    }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,229,255,.3); }
+
+    /* ── CONFETTI ── */
+    .confetti-piece {
+      position: fixed;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 300;
+      animation: confetti-fall linear forwards;
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ── SHAKE ── */
+    @keyframes shake {
+      0%,100%{ transform: translateX(0) }
+      20%    { transform: translateX(-8px) }
+      40%    { transform: translateX(8px) }
+      60%    { transform: translateX(-5px) }
+      80%    { transform: translateX(5px) }
+    }
+    .shake { animation: shake .35s ease; }
+
+    /* ── PULSE ── */
+    @keyframes pulse-green {
+      0%  { box-shadow: 0 0 0 0 rgba(105,255,71,.5) }
+      70% { box-shadow: 0 0 0 16px rgba(105,255,71,0) }
+      100%{ box-shadow: 0 0 0 0 rgba(105,255,71,0) }
+    }
+    .pulse-green { animation: pulse-green .5s ease; }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- HUD (visível durante o quiz) -->
+<div id="hud" style="display:none;">
+  <div class="hud-block">
+    <div>
+      <div class="hud-label">Pontos</div>
+      <div class="hud-val" id="score-val">0</div>
+    </div>
+  </div>
+  <div id="timer-ring">
+    <svg width="44" height="44" viewBox="0 0 44 44">
+      <circle class="bg" cx="22" cy="22" r="18"/>
+      <circle class="fg" id="timer-circle" cx="22" cy="22" r="18"/>
+    </svg>
+    <div id="timer-num">15</div>
+  </div>
+  <div class="hud-block" style="gap:16px;">
+    <div style="text-align:center;">
+      <div class="hud-label">Combo</div>
+      <div class="hud-val" id="combo-val">x1</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="hud-label">Vidas</div>
+      <div class="hud-val" id="lives-val">❤️❤️❤️</div>
+    </div>
+  </div>
+</div>
+<div id="progress-bar-wrap" style="display:none;"><div id="progress-bar" style="width:0%"></div></div>
+<div id="combo-popup"></div>
+
+<!-- ═══════════ TELA INICIAL ═══════════ -->
+<div class="screen active" id="screen-start">
+  <div class="logo">🎮</div>
+  <h1>Atalhos do Windows</h1>
+  <p>Teste seus conhecimentos sobre atalhos de teclado!<br>15 perguntas · 4 opções · 30s por questão · 3 vidas</p>
+  <button class="btn-primary" style="margin-top:8px;font-size:1.1rem;padding:16px 48px;" onclick="startGame()">Começar 🎮</button>
+</div>
+
+<!-- ═══════════ TELA QUIZ ═══════════ -->
+<div class="screen" id="screen-quiz">
+  <div class="question-card" id="question-card">
+    <div class="question-label" id="q-label">Pergunta 1 de 15</div>
+    <div class="question-text" id="q-text"></div>
+    <div class="key-combo"    id="q-keys" style="margin-top:14px;"></div>
+  </div>
+  <div class="options" id="options"></div>
+  <div id="feedback"></div>
+</div>
+
+<!-- ═══════════ TELA FINAL ═══════════ -->
+<div class="screen" id="screen-end">
+  <div class="end-trophy" id="end-trophy">🏆</div>
+  <h2 id="end-title">Parabéns!</h2>
+  <p id="end-msg" style="color:#aab0cc;max-width:420px;line-height:1.6;"></p>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="val" id="stat-score" style="color:var(--cyan);">0</div>
+      <div class="lbl">Pontuação Final</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-correct" style="color:var(--green);">0</div>
+      <div class="lbl">Acertos</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-combo" style="color:var(--yellow);">x1</div>
+      <div class="lbl">Maior Combo</div>
+    </div>
+  </div>
+  <div class="medals" id="medals"></div>
+  <button class="btn-primary" onclick="resetGame()">Jogar Novamente 🔄</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  BANCO DE PERGUNTAS
+// ════════════════════════════════════════════
+const allQuestions = [
+  // CTRL básicos
+  { keys:['Ctrl','C'],           desc:'Copiar o texto ou arquivo selecionado',          type:'keys' },
+  { keys:['Ctrl','V'],           desc:'Colar o que foi copiado',                         type:'keys' },
+  { keys:['Ctrl','X'],           desc:'Recortar (mover) texto ou arquivo',               type:'keys' },
+  { keys:['Ctrl','Z'],           desc:'Desfazer a última ação',                          type:'keys' },
+  { keys:['Ctrl','Y'],           desc:'Refazer a ação desfeita',                         type:'keys' },
+  { keys:['Ctrl','A'],           desc:'Selecionar tudo de uma vez',                      type:'keys' },
+  { keys:['Ctrl','D'],           desc:'Enviar arquivo para a lixeira',                   type:'keys' },
+  { keys:['Ctrl','R'],           desc:'Atualizar a janela atual',                        type:'keys' },
+  { keys:['Ctrl','S'],           desc:'Salvar o documento',                              type:'keys' },
+  { keys:['Ctrl','P'],           desc:'Imprimir',                                        type:'keys' },
+  { keys:['Ctrl','F'],           desc:'Localizar / buscar texto',                        type:'keys' },
+  { keys:['Ctrl','H'],           desc:'Localizar e substituir texto',                    type:'keys' },
+  { keys:['Ctrl','B'],           desc:'Deixar o texto em negrito',                       type:'keys' },
+  { keys:['Ctrl','I'],           desc:'Deixar o texto em itálico',                       type:'keys' },
+  { keys:['Ctrl','U'],           desc:'Sublinhar o texto',                               type:'keys' },
+  // CTRL avançados
+  { keys:['Ctrl','F4'],          desc:'Fechar guia/aba interna do programa',             type:'keys' },
+  { keys:['Ctrl','Esc'],         desc:'Abrir o Menu Iniciar',                            type:'keys' },
+  { keys:['Ctrl','Alt','Tab'],   desc:'Alternar entre apps com pausa na seleção',        type:'keys' },
+  { keys:['Ctrl','Shift','Esc'], desc:'Abrir o Gerenciador de Tarefas',                  type:'keys' },
+  { keys:['Shift','Delete'],     desc:'Excluir arquivo sem enviar para a lixeira',       type:'keys' },
+  // Cursor
+  { keys:['Ctrl','→'],           desc:'Mover o cursor palavra por palavra para a direita', type:'keys' },
+  { keys:['Ctrl','Shift','→'],   desc:'Selecionar palavra por palavra para a direita',   type:'keys' },
+  { keys:['Home'],               desc:'Ir para o início da linha',                       type:'keys' },
+  { keys:['End'],                desc:'Ir para o fim da linha',                          type:'keys' },
+  // Windows
+  { keys:['⊞','A'],             desc:'Abrir o Centro de Ações (notificações)',           type:'keys' },
+  { keys:['⊞','B'],             desc:'Focar na área de notificações (bandeja)',          type:'keys' },
+  { keys:['⊞','C'],             desc:'Abrir a Cortana',                                  type:'keys' },
+  { keys:['⊞','D'],             desc:'Mostrar ou ocultar a área de trabalho',            type:'keys' },
+  { keys:['⊞','E'],             desc:'Abrir o Explorador de Arquivos',                   type:'keys' },
+  { keys:['⊞','G'],             desc:'Abrir a Game Bar',                                 type:'keys' },
+  { keys:['⊞','I'],             desc:'Abrir as Configurações do Windows',                type:'keys' },
+  { keys:['⊞','L'],             desc:'Bloquear o computador',                            type:'keys' },
+  { keys:['⊞','M'],             desc:'Minimizar todas as janelas',                       type:'keys' },
+  { keys:['⊞','P'],             desc:'Modo de apresentação de tela (projetor)',           type:'keys' },
+  { keys:['⊞','R'],             desc:'Abrir a janela Executar',                          type:'keys' },
+  { keys:['⊞','S'],             desc:'Abrir a Pesquisa do Windows',                      type:'keys' },
+  { keys:['⊞','T'],             desc:'Navegar pelos apps da barra de tarefas',           type:'keys' },
+  { keys:['⊞','Tab'],           desc:'Ver todos os programas abertos',                   type:'keys' },
+  { keys:['⊞','Alt','D'],       desc:'Mostrar data e hora',                              type:'keys' },
+  { keys:['⊞','Shift','S'],     desc:'Capturar parte da tela (Recorte)',                 type:'keys' },
+  { keys:['⊞','V'],             desc:'Abrir o histórico da área de transferência',       type:'keys' },
+  // Janelas
+  { keys:['Alt','Tab'],          desc:'Alternar entre janelas abertas rapidamente',      type:'keys' },
+  { keys:['Alt','F4'],           desc:'Fechar o programa atual',                         type:'keys' },
+  { keys:['Alt','Shift'],        desc:'Alterar o idioma/layout do teclado',              type:'keys' },
+  { keys:['⊞','↑'],             desc:'Maximizar a janela',                               type:'keys' },
+  { keys:['⊞','↓'],             desc:'Minimizar ou restaurar a janela',                  type:'keys' },
+  { keys:['⊞','←'],             desc:'Encaixar a janela na metade esquerda da tela',    type:'keys' },
+  // Navegador
+  { keys:['Ctrl','T'],           desc:'Abrir uma nova aba no navegador',                 type:'keys' },
+  { keys:['Ctrl','W'],           desc:'Fechar a aba atual do navegador',                 type:'keys' },
+  { keys:['Ctrl','Shift','T'],   desc:'Reabrir a última aba fechada',                    type:'keys' },
+  { keys:['Ctrl','Tab'],         desc:'Ir para a próxima aba do navegador',              type:'keys' },
+  { keys:['F5'],                 desc:'Recarregar a página',                             type:'keys' },
+];
+
+// ════════════════════════════════════════════
+//  ESTADO DO JOGO
+// ════════════════════════════════════════════
+let score = 0, lives = 3, combo = 1, maxCombo = 1;
+let correct = 0, total = 0;
+let timerInterval = null, timeLeft = 20;
+let maxTime = 20;
+let gameQuestions = [], qIndex = 0;
+let levelConfig = {};
+let answered = false;
+
+const TOTAL_Q = 15;
+
+// ════════════════════════════════════════════
+//  INÍCIO
+// ════════════════════════════════════════════
+function startGame() {
+  levelConfig = { time: 30, opts: 4, lives: 3 };
+  maxTime     = levelConfig.time;
+  lives       = levelConfig.lives;
+  score = 0; combo = 1; maxCombo = 1; correct = 0; qIndex = 0; answered = false;
+
+  gameQuestions = shuffle([...allQuestions]).slice(0, TOTAL_Q);
+
+  show('screen-quiz');
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('progress-bar-wrap').style.display = 'block';
+  updateHUD();
+  nextQuestion();
+}
+
+// ════════════════════════════════════════════
+//  QUESTÃO
+// ════════════════════════════════════════════
+function nextQuestion() {
+  if (qIndex >= gameQuestions.length || lives <= 0) { endGame(); return; }
+  answered = false;
+
+  const q = gameQuestions[qIndex];
+  total = gameQuestions.length;
+
+  document.getElementById('q-label').textContent = `Pergunta ${qIndex + 1} de ${total}`;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').style.color = '';
+
+  // Alterna tipo de pergunta: par = "qual é o atalho?", ímpar = "o que faz?"
+  const askKeys = qIndex % 2 === 0;
+
+  if (askKeys) {
+    document.getElementById('q-text').textContent = 'Qual é o atalho para:';
+    document.getElementById('q-text').style.display = 'block';
+    document.getElementById('q-keys').innerHTML = '';
+    document.getElementById('q-keys').style.display = 'none';
+
+    const hint = document.createElement('p');
+    hint.textContent = `"${q.desc}"`;
+    hint.style.cssText = 'font-size:1.3rem;font-weight:700;color:#e8eaff;margin-top:10px;';
+    document.getElementById('q-keys').parentNode.insertBefore(hint, document.getElementById('q-keys'));
+    document.getElementById('q-keys')._hintEl = hint;
+  } else {
+    // Limpar hint anterior
+    const prev = document.getElementById('q-keys')._hintEl;
+    if (prev) { prev.remove(); delete document.getElementById('q-keys')._hintEl; }
+
+    document.getElementById('q-text').textContent = 'O que faz esse atalho?';
+    renderKeys(q.keys);
+    document.getElementById('q-keys').style.display = 'flex';
+  }
+
+  // Opções
+  const wrongPool = allQuestions.filter(x => x !== q);
+  const wrongs    = shuffle(wrongPool).slice(0, levelConfig.opts - 1);
+  const opts      = shuffle([q, ...wrongs]);
+
+  const container = document.getElementById('options');
+  container.innerHTML = '';
+  opts.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = askKeys
+      ? keysToHTML(o.keys)
+      : escHtml(o.desc);
+    btn.onclick = () => answer(btn, o === q, q);
+    container.appendChild(btn);
+  });
+
+  // Barra de progresso
+  document.getElementById('progress-bar').style.width = `${(qIndex / total) * 100}%`;
+
+  startTimer();
+}
+
+function renderKeys(keys) {
+  const el = document.getElementById('q-keys');
+  el.innerHTML = '';
+  keys.forEach((k, i) => {
+    if (i > 0) { const plus = document.createElement('span'); plus.className='vkey-plus'; plus.textContent='+'; el.appendChild(plus); }
+    const vk = document.createElement('span'); vk.className='vkey'; vk.textContent=k; el.appendChild(vk);
+  });
+}
+
+function keysToHTML(keys) {
+  return keys.map((k,i) =>
+    (i > 0 ? '<span style="color:#aab0cc;margin:0 3px">+</span>' : '') +
+    `<span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2a2a50,#111128);border:1px solid #666;border-bottom:3px solid #333;border-radius:6px;padding:4px 10px;font-size:.85rem;font-weight:700;min-width:34px;">${escHtml(k)}</span>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════
+//  RESPOSTA
+// ════════════════════════════════════════════
+function answer(btn, isCorrect, q) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInterval);
+
+  const btns = document.querySelectorAll('.opt-btn');
+
+  if (isCorrect) {
+    const pts = Math.round(100 * combo * (timeLeft / maxTime * 0.5 + 0.5));
+    score  += pts;
+    correct++;
+    combo++;
+    if (combo > maxCombo) maxCombo = combo;
+
+    btn.classList.add('correct');
+    document.getElementById('feedback').textContent = `✅ Correto! +${pts} pts`;
+    document.getElementById('feedback').style.color = '#69ff47';
+
+    playTone(880, .15);
+    btn.classList.add('pulse-green');
+
+    if (combo >= 3) showComboPopup();
+  } else {
+    lives--;
+    combo = 1;
+    btn.classList.add('wrong');
+    // Revelar correta
+    btns.forEach(b => {
+      if (b !== btn) b.classList.add('reveal');
+    });
+    document.getElementById('feedback').textContent = `❌ Errado! Combo perdido 😬`;
+    document.getElementById('feedback').style.color = '#ff4d4d';
+
+    playTone(200, .2);
+    document.getElementById('question-card').classList.add('shake');
+    setTimeout(() => document.getElementById('question-card').classList.remove('shake'), 400);
+  }
+
+  updateHUD();
+  qIndex++;
+
+  if (lives <= 0) {
+    setTimeout(endGame, 1200);
+  } else {
+    setTimeout(nextQuestion, 1400);
+  }
+}
+
+// ════════════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════════════
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = maxTime;
+  const circle = document.getElementById('timer-circle');
+  const numEl  = document.getElementById('timer-num');
+  const circum = 113;
+
+  function tick() {
+    numEl.textContent = Math.ceil(timeLeft);
+    const pct = timeLeft / maxTime;
+    circle.style.strokeDashoffset = circum * (1 - pct);
+    circle.style.stroke = pct > .5 ? 'var(--cyan)' : pct > .25 ? 'var(--yellow)' : 'var(--red)';
+
+    timeLeft -= .1;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) {
+        answered = true;
+        lives--;
+        combo = 1;
+        document.getElementById('feedback').textContent = '⏰ Tempo esgotado!';
+        document.getElementById('feedback').style.color = 'var(--yellow)';
+        updateHUD();
+        qIndex++;
+        setTimeout(lives <= 0 ? endGame : nextQuestion, 1200);
+      }
+    }
+  }
+  tick();
+  timerInterval = setInterval(tick, 100);
+}
+
+// ════════════════════════════════════════════
+//  HUD
+// ════════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('score-val').textContent = score.toLocaleString('pt-BR');
+  document.getElementById('combo-val').textContent = `x${combo}`;
+  const h = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, levelConfig.lives - lives));
+  document.getElementById('lives-val').textContent = h || '💀';
+}
+
+function showComboPopup() {
+  const el = document.getElementById('combo-popup');
+  el.textContent = `🔥 COMBO x${combo}!`;
+  el.style.transform = 'translate(-50%,-50%) scale(1)';
+  el.style.opacity   = '1';
+  setTimeout(() => { el.style.transform='translate(-50%,-50%) scale(0)'; el.style.opacity='0'; }, 800);
+}
+
+// ════════════════════════════════════════════
+//  FIM
+// ════════════════════════════════════════════
+function endGame() {
+  clearInterval(timerInterval);
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('progress-bar-wrap').style.display = 'none';
+  document.getElementById('progress-bar').style.width = '100%';
+
+  const pct = correct / gameQuestions.length;
+  let trophy, title, msg;
+  if (pct >= .9)      { trophy='🏆'; title='Incrível! Você é um expert!';       msg='Pontuação excelente! Você domina os atalhos do Windows.'; }
+  else if (pct >= .7) { trophy='🥇'; title='Muito bem!';                         msg='Ótimo desempenho! Pratique mais um pouco para chegar ao topo.'; }
+  else if (pct >= .5) { trophy='🥈'; title='Bom trabalho!';                      msg='Você está no caminho certo. Continue praticando!'; }
+  else                { trophy='📚'; title='Continue praticando!';               msg='Não desanime! Revise os slides e tente novamente.'; }
+
+  document.getElementById('end-trophy').textContent  = trophy;
+  document.getElementById('end-title').textContent   = title;
+  document.getElementById('end-msg').textContent     = msg;
+  document.getElementById('stat-score').textContent  = score.toLocaleString('pt-BR');
+  document.getElementById('stat-correct').textContent= `${correct}/${gameQuestions.length}`;
+  document.getElementById('stat-combo').textContent  = `x${maxCombo}`;
+
+  // Medalhas
+  const earned = [];
+  if (correct === gameQuestions.length) earned.push({ e:'🎯', t:'Perfeito' });
+  if (maxCombo >= 5)                    earned.push({ e:'🔥', t:'Combo x5+' });
+  if (maxCombo >= 3 && lives > 0)       earned.push({ e:'💎', t:'Combo Survivour' });
+  if (lives === levelConfig.lives)      earned.push({ e:'🛡️', t:'Sem erros' });
+
+  const medallasEl = document.getElementById('medals');
+  medallasEl.innerHTML = '';
+  earned.forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'medal earned';
+    el.innerHTML = `${m.e} ${m.t}`;
+    medallasEl.appendChild(el);
+  });
+
+  show('screen-end');
+  if (pct >= .7) launchConfetti();
+  playTone(pct >= .7 ? 660 : 330, .3);
+}
+
+function resetGame() {
+  show('screen-start');
+}
+
+// ════════════════════════════════════════════
+//  UTILITÁRIOS
+// ════════════════════════════════════════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ════════════════════════════════════════════
+//  SOM (Web Audio API)
+// ════════════════════════════════════════════
+let audioCtx;
+function playTone(freq, dur) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = freq;
+    o.type = 'sine';
+    g.gain.setValueAtTime(.15, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + dur);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+//  CONFETTI
+// ════════════════════════════════════════════
+function launchConfetti() {
+  const colors = ['#69ff47','#00e5ff','#fbbf24','#c084fc','#ff6b6b','#fff'];
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left      = Math.random() * 100 + 'vw';
+    el.style.top       = '-20px';
+    el.style.background= colors[Math.floor(Math.random() * colors.length)];
+    el.style.width     = (Math.random() * 8 + 5) + 'px';
+    el.style.height    = (Math.random() * 8 + 5) + 'px';
+    el.style.borderRadius = Math.random() > .5 ? '50%' : '2px';
+    el.style.animationDuration  = (Math.random() * 2 + 2) + 's';
+    el.style.animationDelay     = (Math.random() * 1.5) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+}
+
+// ════════════════════════════════════════════
+//  PARTÍCULAS DE FUNDO
+// ════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('particles');
+  const ctx    = canvas.getContext('2d');
+  let W, H, dots = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  for (let i = 0; i < 40; i++) {
+    dots.push({ x: Math.random()*W, y: Math.random()*H,
+                vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3,
+                r: Math.random()*1.5+.5, a: Math.random()*.4+.1 });
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    dots.forEach(d => {
+      d.x += d.vx; d.y += d.vy;
+      if (d.x < 0) d.x=W; if (d.x > W) d.x=0;
+      if (d.y < 0) d.y=H; if (d.y > H) d.y=0;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(0,229,255,${d.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
