@@ -703,7 +703,7 @@
   <button class="btn-action btn-gerar" onclick="gerarRelatorio()">📄 Gerar Relatório</button>
   <a id="btn-download" class="btn-action btn-download">⬇️ Baixar TXT</a>
   <a id="btn-email"    class="btn-action btn-email"    target="_blank">📧 Enviar por Email</a>
-  <div id="action-msg">✅ Relatório gerado! Baixe o arquivo TXT e depois clique em "Enviar por Email" para mandar ao professor.</div>
+  <div id="action-msg">✅ Relatório gerado! <strong>1)</strong> Clique em "Baixar TXT" para salvar o arquivo. <strong>2)</strong> Clique em "Enviar por Email" e anexe o arquivo baixado na mensagem para o professor.</div>
 </div>
 
 <!-- PARABÉNS -->
@@ -887,7 +887,7 @@
       `Olá professor!\n\nSegue em anexo meu exercício prático de Windows.\n\nAluno(a): ${nome}\nTurma: ${turma}\nData: ${data}\n\nAnexei o arquivo ${nomeArquivo} a este email.\n\nAtenciosamente,\n${nome}`
     );
     const btnEmail = document.getElementById('btn-email');
-    btnEmail.href  = `mailto:disraelicosta@gmail.com?subject=${subject}&body=${body}`;
+    btnEmail.href  = `mailto:disraeli.revolution@outlook.com?subject=${subject}&body=${body}`;
     btnEmail.style.display = 'flex';
 
     document.getElementById('action-msg').style.display = 'block';
