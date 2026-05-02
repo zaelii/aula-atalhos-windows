@@ -252,6 +252,77 @@
     .confetti-piece { position: fixed; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 600; animation: fall linear forwards; }
     @keyframes fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
 
+    /* ── ANEXOS ── */
+    #anexos-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--purple);
+      border-radius: 18px;
+      padding: 20px;
+    }
+    #anexos-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; color: #c0c8e0; }
+    #anexos-section p  { font-size: .8rem; color: #8b98b8; margin-bottom: 14px; }
+
+    #drop-zone {
+      border: 2px dashed rgba(192,132,252,.4);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: rgba(192,132,252,.04);
+      position: relative;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--purple);
+      background: rgba(192,132,252,.1);
+    }
+    #drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    #drop-zone .dz-icon  { font-size: 2.2rem; margin-bottom: 8px; }
+    #drop-zone .dz-label { font-size: .9rem; color: #aab0cc; }
+    #drop-zone .dz-sub   { font-size: .75rem; color: #555; margin-top: 4px; }
+
+    #file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+      animation: slideUp .25s ease;
+    }
+    .file-thumb {
+      width: 48px; height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: rgba(255,255,255,.06);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      overflow: hidden;
+    }
+    .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-size: .85rem; color: #d0d8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: .72rem; color: #8b98b8; margin-top: 2px; }
+    .file-remove {
+      background: none; border: none; color: #ff4d4d; cursor: pointer;
+      font-size: 1.1rem; padding: 4px; border-radius: 5px; flex-shrink: 0;
+      transition: background .2s;
+    }
+    .file-remove:hover { background: rgba(255,77,77,.15); }
+
     /* ── PRINT ── */
     @media print {
       body { background: #fff; color: #111; padding-bottom: 0; }
@@ -689,6 +760,21 @@
   </div>
 
   <!-- ══════════════════════════
+       ANEXOS
+  ══════════════════════════ -->
+  <div id="anexos-section">
+    <h3>📎 Anexar arquivos (opcional)</h3>
+    <p>Arraste seus arquivos aqui ou clique para selecionar — ex: Desenho.png, Aprendizados.txt</p>
+    <div id="drop-zone">
+      <input type="file" id="file-input" multiple accept=".txt,.png,.jpg,.jpeg,.bmp,.gif,.pdf,.docx">
+      <div class="dz-icon">📂</div>
+      <div class="dz-label">Arraste arquivos aqui ou clique para selecionar</div>
+      <div class="dz-sub">Formatos aceitos: imagens, .txt, .pdf, .docx</div>
+    </div>
+    <div id="file-list"></div>
+  </div>
+
+  <!-- ══════════════════════════
        OBSERVAÇÕES GERAIS
   ══════════════════════════ -->
   <div id="obs-gerais-section">
@@ -716,6 +802,70 @@
 </div>
 
 <script>
+  // ── ANEXOS ──
+  let attachedFiles = [];
+
+  const dropZone  = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileList  = document.getElementById('file-list');
+
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+  function addFiles(fileArr) {
+    [...fileArr].forEach(f => {
+      if (attachedFiles.find(x => x.name === f.name && x.size === f.size)) return;
+      attachedFiles.push(f);
+      renderFileItem(f);
+    });
+    fileInput.value = '';
+  }
+
+  function renderFileItem(f) {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.dataset.name = f.name;
+
+    const thumb = document.createElement('div');
+    thumb.className = 'file-thumb';
+
+    if (f.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = f.name.endsWith('.txt') ? '📄' : f.name.endsWith('.pdf') ? '📕' : '📎';
+    }
+
+    const info = document.createElement('div');
+    info.className = 'file-info';
+    info.innerHTML = `<div class="file-name">${f.name}</div><div class="file-size">${formatSize(f.size)}</div>`;
+
+    const rem = document.createElement('button');
+    rem.className = 'file-remove';
+    rem.textContent = '✕';
+    rem.title = 'Remover';
+    rem.onclick = () => {
+      attachedFiles = attachedFiles.filter(x => !(x.name === f.name && x.size === f.size));
+      item.remove();
+    };
+
+    item.append(thumb, info, rem);
+    fileList.appendChild(item);
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
   const TOTAL_TASKS = document.querySelectorAll('.task-item').length;
   let completedCount = 0;
 
@@ -867,7 +1017,21 @@
     txt += 'OBSERVAÇÕES GERAIS / DÚVIDAS\n';
     txt += `${'─'.repeat(48)}\n`;
     txt += obsGerais || '(nenhuma observação)';
-    txt += '\n\n================================================\n';
+    txt += '\n\n';
+
+    txt += `${'─'.repeat(48)}\n`;
+    txt += 'ARQUIVOS ANEXADOS\n';
+    txt += `${'─'.repeat(48)}\n`;
+    if (attachedFiles.length === 0) {
+      txt += '(nenhum arquivo anexado)\n';
+    } else {
+      attachedFiles.forEach((f, i) => {
+        txt += `${i + 1}. ${f.name} (${formatSize(f.size)})\n`;
+      });
+      txt += '\n⚠️  Lembre-se de anexar esses arquivos no email ao professor!\n';
+    }
+
+    txt += '\n================================================\n';
     txt += 'Fim do relatório\n';
     txt += '================================================\n';
 
